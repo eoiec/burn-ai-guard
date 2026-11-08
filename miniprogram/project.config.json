@@ -1,0 +1,13 @@
+{
+  "description": "AI防护——家庭热液烫伤深度三分类与低置信度转人工机制 · 微信小程序原型",
+  "appid": "touristappid",
+  "compileType": "miniprogram",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "postcss": true,
+    "minified": true
+  },
+  "projectname": "burn-ai-guard",
+  "libVersion": "3.0.0"
+}

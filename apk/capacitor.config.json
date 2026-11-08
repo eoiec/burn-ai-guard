@@ -1,0 +1,13 @@
+{
+  "appId": "cn.edu.jufe.burnaiguard",
+  "appName": "AI防护",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": true,
+    "webContentsDebuggingEnabled": true
+  },
+  "server": {
+    "androidScheme": "http",
+    "hostname": "localhost"
+  }
+}

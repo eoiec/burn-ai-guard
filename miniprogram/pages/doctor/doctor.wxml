@@ -1,0 +1,40 @@
+<view class="page">
+  <block wx:if="{{!logged}}">
+    <view class="card login">
+      <view class="h2">🩺 医生复核工作台</view>
+      <view class="sub">演示账号 doctor / burn2026</view>
+      <input class="inp" value="{{user}}" bindinput="inputUser" placeholder="账号" />
+      <input class="inp" password value="{{pass}}" bindinput="inputPass" placeholder="口令" />
+      <button class="btn" bindtap="login">登录</button>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="stats" wx:if="{{stats}}">
+      <view class="stat"><view class="v">{{stats.tickets_pending}}</view><view class="k">待复核</view></view>
+      <view class="stat"><view class="v">{{stats.tickets_done}}</view><view class="k">已完成</view></view>
+      <view class="stat warn"><view class="v">{{stats.referral_pct}}%</view><view class="k">转人工率</view></view>
+      <view class="stat danger"><view class="v">{{stats.revision_pct}}%</view><view class="k">修正率</view></view>
+    </view>
+
+    <view class="card">
+      <view class="rowhead">
+        <view class="h2">复核工单</view>
+        <picker range="{{['全部','待复核','复核中','已完成']}}" value="{{filter === '' ? 0 : filter === 'pending' ? 1 : filter === 'claimed' ? 2 : 3}}" bindchange="pickFilter">
+          <view class="sel small">{{filter || '全部'}} ›</view>
+        </picker>
+      </view>
+      <view wx:if="{{!tickets.length}}" class="hint" style="padding:20rpx 0">🎉 暂无待办工单</view>
+      <view class="trow" wx:for="{{tickets}}" wx:key="id" data-id="{{item.id}}" bindtap="openTicket">
+        <image class="thumb" src="{{item.image_url}}" mode="aspectFill" />
+        <view class="mid">
+          <view class="t1">AI：{{item.ai_class_name}} · {{item.conf_pct}}%</view>
+          <view class="t2">{{item.prob_text}}</view>
+          <view class="t2">已等待 {{item.wait_text}} · {{item.status_name}}</view>
+        </view>
+        <view class="tagp {{item.priority === 'high' ? 'high' : 'normal'}}">{{item.priority === 'high' ? '紧急' : '普通'}}</view>
+      </view>
+    </view>
+    <button class="btn ghost" bindtap="logout">退出登录（{{doctor.name}}）</button>
+  </block>
+</view>

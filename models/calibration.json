@@ -1,0 +1,201 @@
+{
+  "temperature": {
+    "head3": 0.56,
+    "head_a": 0.48,
+    "head_b": 0.3
+  },
+  "review_threshold": 0.85,
+  "calibrated": true,
+  "ece": {
+    "before": 0.0653,
+    "after": 0.0337,
+    "bins_before": [
+      {
+        "bin": "0.0-0.1",
+        "n": 0,
+        "conf": null,
+        "acc": null
+      },
+      {
+        "bin": "0.1-0.2",
+        "n": 0,
+        "conf": null,
+        "acc": null
+      },
+      {
+        "bin": "0.2-0.3",
+        "n": 0,
+        "conf": null,
+        "acc": null
+      },
+      {
+        "bin": "0.3-0.4",
+        "n": 0,
+        "conf": null,
+        "acc": null
+      },
+      {
+        "bin": "0.4-0.5",
+        "n": 0,
+        "conf": null,
+        "acc": null
+      },
+      {
+        "bin": "0.5-0.6",
+        "n": 14,
+        "conf": 0.5568,
+        "acc": 0.7143
+      },
+      {
+        "bin": "0.6-0.7",
+        "n": 11,
+        "conf": 0.6546,
+        "acc": 0.4545
+      },
+      {
+        "bin": "0.7-0.8",
+        "n": 7,
+        "conf": 0.7615,
+        "acc": 1.0
+      },
+      {
+        "bin": "0.8-0.9",
+        "n": 22,
+        "conf": 0.8614,
+        "acc": 1.0
+      },
+      {
+        "bin": "0.9-1.0",
+        "n": 126,
+        "conf": 0.9791,
+        "acc": 1.0
+      }
+    ],
+    "bins_after": [
+      {
+        "bin": "0.0-0.1",
+        "n": 0,
+        "conf": null,
+        "acc": null
+      },
+      {
+        "bin": "0.1-0.2",
+        "n": 0,
+        "conf": null,
+        "acc": null
+      },
+      {
+        "bin": "0.2-0.3",
+        "n": 0,
+        "conf": null,
+        "acc": null
+      },
+      {
+        "bin": "0.3-0.4",
+        "n": 0,
+        "conf": null,
+        "acc": null
+      },
+      {
+        "bin": "0.4-0.5",
+        "n": 0,
+        "conf": null,
+        "acc": null
+      },
+      {
+        "bin": "0.5-0.6",
+        "n": 7,
+        "conf": 0.5559,
+        "acc": 0.7143
+      },
+      {
+        "bin": "0.6-0.7",
+        "n": 7,
+        "conf": 0.6598,
+        "acc": 0.7143
+      },
+      {
+        "bin": "0.7-0.8",
+        "n": 6,
+        "conf": 0.7431,
+        "acc": 0.5
+      },
+      {
+        "bin": "0.8-0.9",
+        "n": 7,
+        "conf": 0.8418,
+        "acc": 0.5714
+      },
+      {
+        "bin": "0.9-1.0",
+        "n": 153,
+        "conf": 0.992,
+        "acc": 1.0
+      }
+    ]
+  },
+  "sensitivity": [
+    {
+      "threshold": 0.6,
+      "referral_rate": 0.0389,
+      "full_thickness_miss_rate": 0.0,
+      "n_referral": 7
+    },
+    {
+      "threshold": 0.65,
+      "referral_rate": 0.05,
+      "full_thickness_miss_rate": 0.0,
+      "n_referral": 9
+    },
+    {
+      "threshold": 0.7,
+      "referral_rate": 0.0778,
+      "full_thickness_miss_rate": 0.0,
+      "n_referral": 14
+    },
+    {
+      "threshold": 0.75,
+      "referral_rate": 0.0944,
+      "full_thickness_miss_rate": 0.0,
+      "n_referral": 17
+    },
+    {
+      "threshold": 0.8,
+      "referral_rate": 0.1111,
+      "full_thickness_miss_rate": 0.0,
+      "n_referral": 20
+    },
+    {
+      "threshold": 0.85,
+      "referral_rate": 0.1333,
+      "full_thickness_miss_rate": 0.0,
+      "n_referral": 24
+    }
+  ],
+  "metrics": {
+    "split": "test",
+    "accuracy": 0.9611,
+    "per_class": {
+      "浅度烧伤": {
+        "precision": 0.9492,
+        "recall": 0.9333,
+        "f1": 0.9412,
+        "support": 60
+      },
+      "深二度烧伤": {
+        "precision": 0.9344,
+        "recall": 0.95,
+        "f1": 0.9421,
+        "support": 60
+      },
+      "三度烧伤": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 60
+      }
+    },
+    "referral_rate": 0.0611,
+    "full_thickness_miss_rate": 0.0
+  }
+}

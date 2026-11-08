@@ -1,0 +1,19 @@
+.page { padding: 24rpx; background: #f4f7fa; min-height: 100vh; }
+.card { background: #fff; border-radius: 28rpx; padding: 30rpx; margin-top: 20rpx; }
+.wound { width: 100%; border-radius: 24rpx; }
+.h2 { font-size: 32rpx; font-weight: 700; margin-bottom: 14rpx; }
+.h2.ok { color: #16a34a; }
+.rowline { display: flex; justify-content: space-between; font-size: 27rpx; color: #51606c; margin-bottom: 14rpx; }
+.bar { margin-top: 12rpx; }
+.bar .lab { display: flex; justify-content: space-between; font-size: 23rpx; color: #51606c; margin-bottom: 6rpx; }
+.bar .track { height: 14rpx; background: #edf2f6; border-radius: 99rpx; }
+.bar .fill { height: 100%; border-radius: 99rpx; }
+.banner { background: #fef4e2; color: #92600a; border-radius: 16rpx; padding: 16rpx 20rpx; font-size: 24rpx; margin-top: 16rpx; }
+.kv { display: flex; justify-content: space-between; font-size: 26rpx; color: #51606c; padding: 12rpx 0; border-bottom: 1rpx dashed #e3eaf0; }
+.chips { display: flex; flex-wrap: wrap; gap: 12rpx; }
+.chip { font-size: 25rpx; padding: 14rpx 26rpx; border-radius: 999rpx; border: 1rpx solid #e3eaf0; background: #fbfdfe; color: #51606c; }
+.chip.on { background: #e6f6f4; border-color: #0ea5a4; color: #0f766e; font-weight: 700; }
+.f { font-size: 25rpx; color: #51606c; margin: 22rpx 0 10rpx; }
+.ta { width: 100%; background: #fbfdfe; border: 1rpx solid #e3eaf0; border-radius: 16rpx; padding: 18rpx; font-size: 26rpx; }
+.btn { margin-top: 26rpx; background: linear-gradient(135deg, #0f766e, #0ea5a4); color: #fff; border-radius: 22rpx; }
+.btn.ghost { background: #fff; color: #51606c; border: 1rpx solid #e3eaf0; }

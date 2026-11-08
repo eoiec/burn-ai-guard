@@ -1,0 +1,48 @@
+<view class="page" wx:if="{{t}}">
+  <image class="wound" src="{{t.image_url}}" mode="widthFix" />
+
+  <view class="card">
+    <view class="h2">AI 初步分析</view>
+    <view class="rowline"><text>判读</text><b>{{t.ai_class_name}} · {{t.conf_pct}}%</b></view>
+    <view class="bar" wx:for="{{t.probs}}" wx:key="name">
+      <view class="lab"><text>{{item.name}}</text><text>{{item.pct}}%</text></view>
+      <view class="track"><view class="fill" style="width:{{item.pct}}%;background:{{item.color}}"></view></view>
+    </view>
+    <view class="banner warn" wx:for="{{t.reasons}}" wx:key="*this" wx:if="{{t.reasons.length}}">⚠️ {{item}}</view>
+    <view class="hint">图像质量分 {{t.quality_score}}</view>
+  </view>
+
+  <view class="card">
+    <view class="h2">患者信息</view>
+    <view class="kv"><text>自评面积</text><text>{{["<1 手掌","1–5 手掌","5–10 手掌",">10 手掌"][t.user_meta.area_hand || 0]}}</text></view>
+    <view class="kv"><text>红旗症状</text><text>{{t.user_meta.red_flags || '无'}}</text></view>
+    <view class="kv" wx:if="{{t.user_meta.note}}"><text>补充</text><text>{{t.user_meta.note}}</text></view>
+  </view>
+
+  <view class="card" wx:if="{{done}}">
+    <view class="h2 ok">✅ 复核已完成</view>
+    <view>最终结论：{{t.finalName}}</view>
+  </view>
+
+  <view class="card" wx:if="{{!done && !claimed}}">
+    <button class="btn" bindtap="claim">🧑‍⚕️ 领取工单并开始复核</button>
+  </view>
+
+  <view class="card" wx:if="{{!done && claimed}}">
+    <view class="h2">复核结论</view>
+    <view class="chips">
+      <view class="chip {{decision === 'confirm' ? 'on' : ''}}" data-d="confirm" bindtap="pickDecision">✔ 确认 AI 判读</view>
+      <view class="chip {{decision === 'correct' ? 'on' : ''}}" data-d="correct" bindtap="pickDecision">✎ 修正判断</view>
+    </view>
+    <block wx:if="{{decision === 'correct'}}">
+      <view class="f">修正后的分级</view>
+      <view class="chips">
+        <view wx:for="{{CLASS}}" wx:key="*this" class="chip {{correctIdx === index ? 'on' : ''}}"
+              data-c="{{index}}" bindtap="pickClass">{{item}}</view>
+      </view>
+    </block>
+    <view class="f">复核意见（可选）</view>
+    <textarea class="ta" rows="3" bindinput="inputNote" placeholder="基底苍白潮湿，触痛迟钝，考虑深二度…"></textarea>
+    <button class="btn" bindtap="submit">提交复核结论并回传用户</button>
+  </view>
+</view>

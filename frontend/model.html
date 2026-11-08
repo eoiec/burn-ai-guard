@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>模型卡 · AI 防护</title>
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="logo">📊</div>
+    <div>
+      <h1>模型卡与安全机制报告</h1>
+      <p>ResNet50 三分类 · 温度缩放校准 · 转人工阈值分析</p>
+    </div>
+    <div class="nav"><a href="/">用户端</a><a href="/doctor">医生端</a></div>
+  </div>
+
+  <div class="card" id="card"></div>
+
+  <div class="card" id="reports" style="display:none">
+    <h2><span class="dot"></span>评估报告图</h2>
+    <div class="sub">训练与校准过程自动生成于 reports/ 目录</div>
+    <div id="imgZone"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot"></span>安全机制说明</h2>
+    <ul class="actlist" style="margin-top:8px">
+      <li><span class="no">1</span><span><b>置信度校准：</b>温度缩放 (Temperature Scaling) 调整模型输出，使"置信度 80%"真正对应约 80% 的经验准确率，杜绝"过度自信的错误结论"。</span></li>
+      <li><span class="no">2</span><span><b>低置信度强制转人工：</b>校准后最大概率低于阈值（默认 75%，由验证集敏感性分析确定）即标记"仅供参考"并生成复核工单。</span></li>
+      <li><span class="no">3</span><span><b>三度风险护栏：</b>即使整体判读不是三度，只要 P(三度)≥20%，同样强制转人工 —— 漏掉三度的代价远高于一次转人工。</span></li>
+      <li><span class="no">4</span><span><b>图像质量筛查：</b>过暗 / 模糊 / 过曝的图像不进入"自信结论"，转人工并提示重拍。</span></li>
+      <li><span class="no">5</span><span><b>红旗症状升级：</b>用户自述的吸入性损伤、休克征象、特殊部位、大面积、化学/电击等，直接升级处置等级，AI 判断只升不降。</span></li>
+      <li><span class="no">6</span><span><b>全链路审计：</b>每次判读、转人工、领取、复核、回传均写入审计日志，可追溯。</span></li>
+    </ul>
+  </div>
+  <div class="foot">数据声明：当前演示模型基于程序化合成创面图像训练，仅用于工程链路验证，不具备临床效力；真实数据接入后按同一管线重训。</div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+fetch("/api/model").then(r => r.json()).then(d => {
+  const c = d.card;
+  const T = c.temperature || {};
+  const ece = c.ece || {};
+  const m = c.metrics || {};
+  $("#card").innerHTML = `
+    <h2><span class="dot"></span>模型概况</h2>
+    <table class="tb" style="margin-top:8px">
+      <tr><td>架构</td><td>${c.arch}</td></tr>
+      <tr><td>类别体系</td><td>${(c.classes || []).join("；")}</td></tr>
+      <tr><td>服务状态</td><td>${c.ready ? "✅ 就绪" : "❌ " + (c.error || "未就绪")}</td></tr>
+      <tr><td>训练数据</td><td>${(c.train_meta && c.train_meta.trained_on) || "—"} · ${(c.train_meta && c.train_meta.date) || "—"}</td></tr>
+      <tr><td>温度参数 T</td><td>三分类头 ${T.head3} · 浅度头 ${T.head_a} · 深二度/三度头 ${T.head_b}${c.calibrated ? "（已校准）" : "（未校准）"}</td></tr>
+      <tr><td>ECE</td><td>校准前 ${ece.before ?? "—"} → 校准后 <b>${ece.after ?? "—"}</b>（目标 ≤ 0.08）</td></tr>
+      <tr><td>转人工阈值</td><td><b>${(c.review_threshold * 100).toFixed(0)}%</b></td></tr>
+      <tr><td>测试集准确率</td><td>${m.accuracy != null ? (m.accuracy * 100).toFixed(2) + "%" : "—"}</td></tr>
+      <tr><td>三度召回率</td><td>${m.per_class && m.per_class["三度烧伤"] ? (m.per_class["三度烧伤"].recall * 100).toFixed(2) + "%" : "—"}</td></tr>
+      <tr><td>转人工率 / 三度漏诊率</td><td>${m.referral_rate != null ? (m.referral_rate * 100).toFixed(1) + "% / " + (m.full_thickness_miss_rate * 100).toFixed(1) + "%" : "—"}</td></tr>
+    </table>
+    ${(c.sensitivity || []).length ? `<h2 style="margin-top:18px"><span class="dot"></span>阈值敏感性分析（验证集）</h2>
+    <table class="tb" style="margin-top:8px">
+      <tr><th>阈值</th><th>转人工率</th><th>三度漏诊率</th><th>转人工例数</th></tr>
+      ${c.sensitivity.map(r => `<tr ${r.threshold === c.review_threshold ? 'style="background:var(--brand-soft);font-weight:600"' : ""}>
+        <td>${(r.threshold * 100).toFixed(0)}%</td><td>${(r.referral_rate * 100).toFixed(1)}%</td>
+        <td>${(r.full_thickness_miss_rate * 100).toFixed(1)}%</td><td>${r.n_referral}</td></tr>`).join("")}
+    </table>` : ""}`;
+
+  if ((c.reports || []).length) {
+    $("#reports").style.display = "block";
+    const labels = { "reliability.png": "可靠性图（校准前后）", "tradeoff.png": "转人工率-漏诊率权衡曲线", "confusion_matrix.png": "混淆矩阵" };
+    $("#imgZone").innerHTML = c.reports.map(f =>
+      `<div style="margin-top:12px"><div class="sub">${labels[f] || f}</div>
+       <img src="/reports/${f}" style="max-width:100%;border:1px solid var(--line);border-radius:12px"></div>`).join("");
+  }
+});
+</script>
+</body>
+</html>

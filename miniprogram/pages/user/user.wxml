@@ -1,0 +1,115 @@
+<view class="page">
+  <view class="steps">
+    <view class="st {{step >= 1 ? 'on' : ''}}"><text>①拍摄</text></view>
+    <view class="st {{step >= 2 ? 'on' : ''}}"><text>②信息</text></view>
+    <view class="st {{step >= 3 ? 'on' : ''}}"><text>③判读</text></view>
+    <view class="st {{step >= 4 ? 'on' : ''}}"><text>④建议</text></view>
+  </view>
+
+  <!-- 步骤1 拍摄 -->
+  <view class="card" wx:if="{{step === 1}}">
+    <view class="h2">🛡️ 烫伤智能判读</view>
+    <view class="sub">拍摄创面照片，AI 初筛深度分级；不确定时自动转医生复核</view>
+    <view class="drop" bindtap="chooseImage">
+      <text class="ic">📷</text>
+      <text class="big">拍照 / 从相册选择</text>
+      <text class="hint">自然光 · 对准对焦 · 创面占主体</text>
+    </view>
+    <navigator url="/pages/doctor/doctor" class="doclink">我是医生 → 进入复核工作台</navigator>
+  </view>
+
+  <block wx:if="{{imgPath && step >= 2}}">
+    <image class="wound" src="{{imgPath}}" mode="aspectFill" bindtap="chooseImage"></image>
+
+    <!-- 步骤2 信息 -->
+    <view class="card" wx:if="{{step === 2}}">
+      <view class="h2">受伤信息</view>
+      <view class="sub">用于安全升级：AI 判读 + 红旗症状，双重把关</view>
+      <view class="f">受伤人群</view>
+      <picker range="{{ages}}" range-key="t" value="{{ageIdx}}" bindchange="pickAge">
+        <view class="sel">{{ages[ageIdx].t}} ›</view>
+      </picker>
+      <view class="f">烫伤部位</view>
+      <picker range="{{sites}}" range-key="t" value="{{siteIdx}}" bindchange="pickSite">
+        <view class="sel">{{sites[siteIdx].t}} ›</view>
+      </picker>
+      <view class="f">面积自评（1 手掌 ≈ 1% 体表）</view>
+      <picker range="{{areas}}" value="{{areaIdx}}" bindchange="pickArea">
+        <view class="sel">{{areas[areaIdx]}} ›</view>
+      </picker>
+      <view class="f">致伤原因</view>
+      <picker range="{{causes}}" range-key="t" value="{{causeIdx}}" bindchange="pickCause">
+        <view class="sel">{{causes[causeIdx].t}} ›</view>
+      </picker>
+      <view class="f">红旗症状（有则点选）</view>
+      <view class="chips">
+        <view wx:for="{{flags}}" wx:key="k" class="chip red {{item.on ? 'on' : ''}}"
+              data-i="{{index}}" bindtap="toggleFlag">{{item.t}}</view>
+      </view>
+      <button class="btn" bindtap="analyze" loading="{{analyzing}}">🧠 开始 AI 判读</button>
+    </view>
+
+    <!-- 步骤3 分析中 -->
+    <view class="card center" wx:if="{{analyzing}}">
+      <view class="ring"></view>
+      <view class="big">AI 正在分析…</view>
+      <view class="hint">深度学习推理 · 置信度校准 · 安全筛查</view>
+    </view>
+
+    <!-- 步骤4 结果 -->
+    <block wx:if="{{step === 4 && result}}">
+      <view class="verdict" style="background:linear-gradient(135deg,{{confColor}},{{confColor}}cc)">
+        <view class="k">AI 判读结果</view>
+        <view class="name">{{result.ai.class_label}}</view>
+        <view class="row">
+          <view class="confbox"><view class="confnum">{{confPct}}%</view><view class="conftip">校准置信度</view></view>
+          <view class="meta">
+            转人工阈值 {{result.ai.threshold * 100}}%\n推理 {{result.ai.latency_ms}}ms
+          </view>
+        </view>
+        <view class="bars">
+          <view class="bar" wx:for="{{probsPct}}" wx:key="name">
+            <view class="lab"><text>{{item.name}}</text><text>{{item.pct}}%</text></view>
+            <view class="track"><view class="fill" style="width:{{item.pct}}%;background:{{item.color}}"></view></view>
+          </view>
+        </view>
+      </view>
+
+      <view class="banner warn" wx:if="{{result.ai.need_review}}">
+        ⚠️ AI 结果仅供参考，已转医生复核
+        <view class="reason" wx:for="{{result.ai.review_reasons}}" wx:key="text">· {{item.text}}</view>
+      </view>
+      <view class="banner ok" wx:else>✅ 置信度充足，未转人工复核。与伤情明显不符时请立即就医。</view>
+      <view class="banner info" wx:if="{{result.ai.quality.flags.length}}">
+        📸 {{result.ai.quality.flags}}
+      </view>
+
+      <view class="card" wx:if="{{reviewStatus === 'pending'}}">
+        <view class="h2">医生复核</view>
+        <view class="reviewing">● 复核中 / 待复核（紧急 30 分钟 / 普通 4 小时），完成后自动更新</view>
+      </view>
+      <view class="card" wx:if="{{reviewStatus === 'done'}}">
+        <view class="h2 ok">✅ 医生复核完成</view>
+        <view>{{reviewDone.decision === 'confirm' ? '确认 AI 判读' : '已修正 AI 判读'}} · {{reviewDone.doctor}}</view>
+        <view class="hint" wx:if="{{reviewDone.note}}">意见：{{reviewDone.note}}</view>
+      </view>
+
+      <view class="card">
+        <view class="h2">分级处置建议</view>
+        <view class="advhead" style="background:linear-gradient(135deg,{{advice.color}},{{advice.color}}cc)">
+          <view class="lv">{{advice.label}}</view>
+          <view class="eta">时间要求：{{advice.eta}}</view>
+        </view>
+        <view class="advtip">{{advice.headline}}</view>
+        <view class="act" wx:for="{{advice.actions}}" wx:key="*this">{{index + 1}}. {{item}}</view>
+        <view class="f" style="margin-top:16rpx">❌ 不要做</view>
+        <view class="pillrow"><text class="pill red" wx:for="{{advice.avoid}}" wx:key="*this">{{item}}</text></view>
+        <view class="f" style="margin-top:16rpx">👀 危险信号</view>
+        <view class="pillrow"><text class="pill" wx:for="{{advice.watch}}" wx:key="*this">{{item}}</text></view>
+        <view class="hint" style="margin-top:16rpx">{{advice.disclaimer}}</view>
+      </view>
+
+      <button class="btn ghost" bindtap="restart">📷 再测一次</button>
+    </block>
+  </block>
+</view>

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 防护 · 医生复核工作台</title>
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+<div class="wrap wide">
+  <div class="topbar">
+    <div class="logo">🩺</div>
+    <div>
+      <h1>医生复核工作台</h1>
+      <p>低置信度 / 红旗案例 · 分级工单 · SLA 时限跟踪</p>
+    </div>
+    <div class="nav">
+      <a href="/">用户端</a>
+      <a href="/model">模型卡</a>
+    </div>
+  </div>
+
+  <!-- 登录 -->
+  <div class="card" id="loginCard" style="max-width:420px;margin:40px auto">
+    <h2><span class="dot"></span>医生登录</h2>
+    <div class="sub">演示账号：doctor / burn2026</div>
+    <label class="f">账号<input type="text" id="lgUser" value="doctor"></label>
+    <label class="f" style="margin-top:10px">口令<input type="password" id="lgPass" value="burn2026"></label>
+    <button class="btn" id="btnLogin" style="margin-top:16px">登录</button>
+  </div>
+
+  <!-- 工作台 -->
+  <div id="board" style="display:none">
+    <div class="statgrid" id="statGrid"></div>
+
+    <div class="card">
+      <h2><span class="dot"></span>复核工单
+        <span style="margin-left:auto;display:flex;gap:8px">
+          <select id="filter" style="width:auto;padding:6px 10px;font-size:13px">
+            <option value="">全部</option>
+            <option value="pending" selected>待复核</option>
+            <option value="claimed">复核中（我领取的）</option>
+            <option value="done">已完成</option>
+          </select>
+          <button class="btn small ghost" id="btnRefresh">🔄 刷新</button>
+        </span>
+      </h2>
+      <div class="sub">按优先级和时间排序；<b style="color:var(--danger)">高优先级</b>=三度风险 / 红旗症状 / 低置信度，SLA 30 分钟</div>
+      <div id="ticketList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 详情弹层 -->
+<div class="mask" id="mask">
+  <div class="modal">
+    <div id="modalBody"></div>
+  </div>
+</div>
+<div class="imgzoom" id="zoom"><img id="zoomImg"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+let TOKEN = sessionStorage.getItem("burn_token") || "";
+let DOCTOR = JSON.parse(sessionStorage.getItem("burn_doctor") || "null");
+const CLASS_NAMES = ["浅度烧伤", "深二度烧伤", "三度烧伤"];
+const CLASS_COLOR = ["#0e9f6e", "#d97706", "#dc2626"];
+
+function headers() { return { "X-Token": TOKEN, "Content-Type": "application/json" }; }
+
+$("#btnLogin").onclick = async () => {
+  const r = await fetch("/api/doctor/login", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: $("#lgUser").value, password: $("#lgPass").value })
+  });
+  const d = await r.json();
+  if (!d.ok) { alert(d.error); return; }
+  TOKEN = d.token; DOCTOR = d.doctor;
+  sessionStorage.setItem("burn_token", TOKEN);
+  sessionStorage.setItem("burn_doctor", JSON.stringify(d.doctor));
+  enter();
+};
+
+async function enter() {
+  $("#loginCard").style.display = "none";
+  $("#board").style.display = "block";
+  $("#loginCard").querySelector(".sub").textContent = "";
+  await Promise.all([loadStats(), loadTickets()]);
+}
+
+/* ---------------- 统计 ---------------- */
+async function loadStats() {
+  const r = await fetch("/api/doctor/stats", { headers: headers() });
+  const d = await r.json();
+  if (!d.ok) return logout();
+  const s = d.stats;
+  const items = [
+    ["待复核", s.tickets_pending, "warn"], ["复核中", s.tickets_claimed, ""],
+    ["已完成", s.tickets_done, ""], ["累计病例", s.cases, ""],
+    ["转人工率", (s.referral_rate * 100).toFixed(1) + "%", "warn"],
+    ["复核修正率", (s.revision_rate * 100).toFixed(1) + "%", "danger"],
+    ["平均复核时长", s.avg_review_seconds ? Math.round(s.avg_review_seconds / 60) + " 分" : "—", ""],
+    ["SUS 均分", s.n ? s.avg.toFixed(1) : "—", ""],
+  ];
+  $("#statGrid").innerHTML = items.map(([k, v, c]) =>
+    `<div class="stat ${c}"><div class="v">${v}</div><div class="k">${k}</div></div>`).join("");
+}
+
+function logout() {
+  sessionStorage.clear(); TOKEN = ""; DOCTOR = null;
+  $("#board").style.display = "none"; $("#loginCard").style.display = "block";
+}
+
+/* ---------------- 工单列表 ---------------- */
+async function loadTickets() {
+  const st = $("#filter").value;
+  const r = await fetch("/api/doctor/tickets" + (st ? "?status=" + st : ""), { headers: headers() });
+  const d = await r.json();
+  if (!d.ok) return logout();
+  const box = $("#ticketList");
+  if (!d.tickets.length) { box.innerHTML = `<div class="sub">🎉 暂无工单，AI 判读一切正常。</div>`; return; }
+  box.innerHTML = d.tickets.map(t => {
+    const probs = (t.ai_probs || []).map((p, i) =>
+      `${CLASS_NAMES[i]} ${(p * 100).toFixed(0)}%`).join(" · ");
+    const flags = [];
+    if (t.priority === "high") flags.push(`<span class="tagp high">高优先级</span>`);
+    if (t.overdue) flags.push(`<span class="tagp overdue">超时</span>`);
+    flags.push(`<span class="tagp ${t.status === 'done' ? 'done' : t.status === 'claimed' ? 'normal' : 'pending'}">${
+      { pending: "待领取", claimed: "复核中", done: "已完成" }[t.status]}</span>`);
+    const wait = t.waited_s > 90 ? Math.round(t.waited_s / 60) + " 分钟" : t.waited_s + " 秒";
+    return `<div class="trow" onclick="openTicket('${t.id}')">
+      <img src="${t.image_url}">
+      <div class="mid">
+        <div class="t1">AI：${t.ai_class_name} · 置信度 ${(t.ai_confidence * 100).toFixed(1)}% ${flags.join("")}</div>
+        <div class="t2">${probs}</div>
+        <div class="t2">已等待 ${wait} · 病例 ${t.case_id}</div>
+      </div>
+      <div style="font-size:20px;color:var(--ink-3)">›</div>
+    </div>`;
+  }).join("");
+}
+$("#filter").onchange = loadTickets;
+$("#btnRefresh").onclick = () => { loadStats(); loadTickets(); };
+
+/* ---------------- 详情与复核 ---------------- */
+async function openTicket(tid) {
+  const r = await fetch("/api/doctor/tickets", { headers: headers() });
+  const d = await r.json();
+  const t = d.tickets.find(x => x.id === tid);
+  if (!t) return;
+  const meta = t.user_meta || {};
+  const SITE = { trunk: "躯干", limb: "四肢", hand_foot: "手/足", face_neck: "面部/颈部", perineum: "会阴", joint: "关节" };
+  const AGE = { adult: "成人", infant: "婴幼儿", elder: "老年人" };
+  const CAUSE = { hot_liquid: "热水/热汤", steam: "蒸汽", flame: "火焰", chemical: "化学", electrical: "电击", other: "其他" };
+  const probs = (t.ai_probs || []).map((p, i) => `
+    <div class="bar"><div class="lab"><span>${CLASS_NAMES[i]}</span><b>${(p * 100).toFixed(1)}%</b></div>
+    <div class="track"><div class="fill" style="width:${p * 100}%;background:${CLASS_COLOR[i]}"></div></div></div>`).join("");
+
+  $("#modalBody").innerHTML = `
+    <h2><span class="dot"></span>病例 ${t.case_id}
+      <button class="btn small ghost" style="margin-left:auto" onclick="closeModal()">✕ 关闭</button></h2>
+    <img class="wound" id="woundImg" src="${t.image_url}" onclick="zoomIt(this.src)">
+    <div style="font-size:12px;color:var(--ink-3);margin:6px 0 14px">点击图像放大查看 · 建议结合创面颜色、湿润度、疼痛史综合判断</div>
+    <div class="card" style="box-shadow:none;margin-bottom:12px">
+      <div class="sub">AI 初步分析${t.quality_score < 0.35 ? ' · <b style="color:var(--danger)">图像质量不足</b>' : ""}</div>
+      ${probs}
+      ${(t.review_reasons || []).map(x => `<div class="banner warn" style="margin-top:8px"><div class="ic">⚠️</div><div>${x.text}</div></div>`).join("")}
+    </div>
+    <div class="card" style="box-shadow:none;margin-bottom:12px">
+      <div class="sub">患者信息</div>
+      <table class="tb">
+        <tr><td>人群</td><td>${AGE[meta.age_group] || "—"} · 部位 ${SITE[meta.site] || "—"}</td></tr>
+        <tr><td>面积自评</td><td>${["<1 手掌", "1–5 手掌", "5–10 手掌", ">10 手掌"][meta.area_hand || 0]}</td></tr>
+        <tr><td>致伤原因</td><td>${CAUSE[meta.cause] || "—"}</td></tr>
+        <tr><td>红旗症状</td><td>${(meta.red_flags || []).length ? meta.red_flags.join("、") : "无"}</td></tr>
+        ${meta.note ? `<tr><td>补充</td><td>${meta.note}</td></tr>` : ""}
+      </table>
+    </div>
+    <div id="reviewZone">
+      ${t.status === "pending" ? `<button class="btn" onclick="claim('${t.id}')">🧑‍⚕️ 领取工单并开始复核</button>` : ""}
+      ${t.status === "claimed" ? reviewForm(t) : ""}
+      ${t.status === "done" ? `<div class="banner ok"><div class="ic">✅</div><div>复核已完成：最终结论 ${
+        t.final_class === t.ai_class ? "确认 " + CLASS_NAMES[t.final_class] : "修正为 " + CLASS_NAMES[t.final_class]}</div></div>` : ""}
+    </div>`;
+  $("#mask").classList.add("show");
+}
+
+function reviewForm(t) {
+  return `<div class="card" style="box-shadow:none">
+    <div class="sub">复核结论</div>
+    <div class="chips" style="margin-bottom:12px">
+      <div class="chip on" id="chConfirm" onclick="pickDecision('confirm')">✔ 确认 AI 判读（${CLASS_NAMES[t.ai_class]}）</div>
+      <div class="chip" id="chCorrect" onclick="pickDecision('correct')">✎ 修正判断</div>
+    </div>
+    <div id="correctZone" style="display:none;margin-bottom:12px">
+      <label class="f">修正后的深度分级</label>
+      <div class="chips">
+        ${CLASS_NAMES.map((n, i) => `<div class="chip" data-c="${i}" onclick="pickClass(this)">${n}</div>`).join("")}
+      </div>
+    </div>
+    <label class="f">复核意见（可选）
+      <textarea id="rvNote" rows="2" placeholder="例如：基底苍白潮湿，触痛迟钝，考虑深二度，建议 24 小时内清创包扎"></textarea>
+    </label>
+    <button class="btn" onclick="submitReview('${t.id}', ${t.ai_class})">提交复核结论并回传用户</button>
+  </div>`;
+}
+
+let DECISION = "confirm", CORRECT = null;
+function pickDecision(d) {
+  DECISION = d; CORRECT = null;
+  $("#chConfirm").classList.toggle("on", d === "confirm");
+  $("#chCorrect").classList.toggle("on", d === "correct");
+  $("#correctZone").style.display = d === "correct" ? "block" : "none";
+}
+function pickClass(el) {
+  document.querySelectorAll("#correctZone .chip").forEach(c => c.classList.remove("on"));
+  el.classList.add("on"); CORRECT = +el.dataset.c;
+}
+
+async function claim(tid) {
+  const r = await fetch(`/api/doctor/tickets/${tid}/claim`, { method: "POST", headers: headers() });
+  const d = await r.json();
+  if (!d.ok) { alert(d.error); return; }
+  openTicket(tid); loadStats();
+}
+
+async function submitReview(tid, aiClass) {
+  const body = { decision: DECISION, corrected_class: DECISION === "correct" ? CORRECT : null, note: $("#rvNote").value };
+  if (DECISION === "correct" && CORRECT === null) { alert("请选择修正后的类别"); return; }
+  const r = await fetch(`/api/doctor/tickets/${tid}/review`, { method: "POST", headers: headers(), body: JSON.stringify(body) });
+  const d = await r.json();
+  if (!d.ok) { alert(d.error); return; }
+  closeModal(); loadStats(); loadTickets();
+}
+
+function closeModal() { $("#mask").classList.remove("show"); }
+function zoomIt(src) { $("#zoomImg").src = src; $("#zoom").classList.add("show"); }
+$("#zoom").onclick = () => $("#zoom").classList.remove("show");
+$("#mask").onclick = e => { if (e.target === $("#mask")) closeModal(); };
+
+if (TOKEN) enter();
+</script>
+</body>
+</html>

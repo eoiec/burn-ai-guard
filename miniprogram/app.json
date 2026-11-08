@@ -1,0 +1,10 @@
+{
+  "pages": ["pages/user/user", "pages/doctor/doctor", "pages/review/review"],
+  "window": {
+    "navigationBarBackgroundColor": "#0f766e",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f4f7fa"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

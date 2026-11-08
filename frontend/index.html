@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI 防护 · 烫伤智能判读</title>
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="logo">🛡️</div>
+    <div>
+      <h1>AI 防护 · 烫伤智能判读</h1>
+      <p>家庭热液烫伤深度三分类 · 低置信度自动转医生复核</p>
+    </div>
+    <div class="nav">
+      <a href="/model">模型卡</a>
+      <a href="/sus">可用性反馈</a>
+      <a href="/doctor">医生端</a>
+    </div>
+  </div>
+
+  <div class="steps" id="steps">
+    <div class="st on"><b>①</b>拍摄创面</div>
+    <div class="st"><b>②</b>补充信息</div>
+    <div class="st"><b>③</b>AI 判读</div>
+    <div class="st"><b>④</b>处置建议</div>
+  </div>
+
+  <!-- 步骤 1：上传 -->
+  <div class="card" id="cardUpload">
+    <h2><span class="dot"></span>拍摄或上传创面照片</h2>
+    <div class="sub">保持自然光、对准对焦，让创面占画面主体；避免闪光灯直射</div>
+    <div id="dropZone" class="drop">
+      <div class="ic">📷</div>
+      <div class="big">点击拍摄 / 选择照片</div>
+      <div class="hint">支持 JPG / PNG / WebP，最大 12MB</div>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" capture="environment" hidden>
+    <div class="samples" id="sampleRow"><span>没有创面照片？点击示例体验：</span></div>
+    <div id="previewWrap" style="display:none">
+      <div class="preview"><img id="previewImg" alt="创面照片"><span class="tag" id="imgTag">已选择</span></div>
+      <button class="btn ghost" id="btnRechoose" style="margin-top:10px">🔄 重新选择照片</button>
+    </div>
+  </div>
+
+  <!-- 步骤 2：信息 -->
+  <div class="card" id="cardInfo" style="display:none">
+    <h2><span class="dot"></span>补充受伤信息</h2>
+    <div class="sub">这些信息用于安全升级判断：AI 判读 + 红旗症状，双重把关</div>
+    <div class="grid2">
+      <label class="f">受伤人群
+        <select id="fAge">
+          <option value="adult">成人（5–69 岁）</option>
+          <option value="infant">婴幼儿（< 5 岁）</option>
+          <option value="elder">老年人（≥ 70 岁）</option>
+        </select>
+      </label>
+      <label class="f">烫伤部位
+        <select id="fSite">
+          <option value="trunk">躯干</option>
+          <option value="limb">四肢</option>
+          <option value="hand_foot">手 / 足</option>
+          <option value="face_neck">面部 / 颈部</option>
+          <option value="perineum">会阴</option>
+          <option value="joint">关节</option>
+        </select>
+      </label>
+      <label class="f">面积自评（1 个手掌 ≈ 1% 体表）
+        <select id="fArea">
+          <option value="0">小于 1 个手掌</option>
+          <option value="1">1–5 个手掌</option>
+          <option value="2">5–10 个手掌</option>
+          <option value="3">大于 10 个手掌</option>
+        </select>
+      </label>
+      <label class="f">致伤原因
+        <select id="fCause">
+          <option value="hot_liquid">热水 / 热汤 / 热粥</option>
+          <option value="steam">蒸汽</option>
+          <option value="flame">火焰</option>
+          <option value="chemical">化学药品</option>
+          <option value="electrical">电击</option>
+          <option value="other">其他</option>
+        </select>
+      </label>
+    </div>
+    <label class="f" style="margin-top:14px"><b>红旗症状</b>（有则勾选，无则跳过）</label>
+    <div class="chips" id="redflagChips"></div>
+    <button class="btn" id="btnAnalyze" style="margin-top:16px" disabled>🧠 开始 AI 判读</button>
+  </div>
+
+  <!-- 步骤 3：分析中 -->
+  <div class="card" id="cardLoading" style="display:none">
+    <div class="analyzing">
+      <div class="ring"></div>
+      <div class="t">AI 正在分析创面图像…</div>
+      <div class="h">深度学习推理 · 置信度校准 · 安全筛查</div>
+    </div>
+  </div>
+
+  <!-- 步骤 4：结果 -->
+  <div id="cardResult" style="display:none">
+    <div class="verdict" id="verdict">
+      <div class="k">AI 判读结果</div>
+      <div class="name" id="vName">—</div>
+      <div class="row">
+        <div class="confring" id="confRing"></div>
+        <div class="meta" id="vMeta"></div>
+      </div>
+    </div>
+
+    <div id="bannerZone" style="margin-top:14px"></div>
+
+    <div class="card" id="reviewCard" style="display:none">
+      <h2><span class="dot"></span>医生复核</h2>
+      <div class="reviewcard" id="reviewBody"></div>
+    </div>
+
+    <div class="card" id="adviceCard">
+      <h2><span class="dot"></span>分级处置建议</h2>
+      <div class="advice-head" id="adviceHead">
+        <div class="lv" id="advLevel">—</div>
+        <div class="eta" id="advEta"></div>
+      </div>
+      <div class="sub" id="advHeadline" style="font-size:13.5px;color:var(--ink-2)"></div>
+      <div id="escZone"></div>
+      <ul class="actlist" id="advActions"></ul>
+      <div style="margin-top:14px" id="advAvoid"></div>
+      <div style="margin-top:14px" id="advWatch"></div>
+      <div class="sub" id="advDisclaimer" style="margin-top:12px"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="dot"></span>急救速记（黄金 1 小时）</h2>
+      <div class="grid3" style="margin-top:10px">
+        <div style="background:var(--ok-soft);border-radius:14px;padding:14px;text-align:center">
+          <div style="font-size:26px">🚿</div><div style="font-size:13px;font-weight:600;color:#176a34">冲</div>
+          <div style="font-size:11.5px;color:var(--ink-3)">流动清水冲 15–30 分钟</div>
+        </div>
+        <div style="background:var(--blue-soft);border-radius:14px;padding:14px;text-align:center">
+          <div style="font-size:26px">🧊</div><div style="font-size:13px;font-weight:600;color:#1e4fae">忌</div>
+          <div style="font-size:11.5px;color:var(--ink-3)">不用冰块 / 牙膏 / 酱油</div>
+        </div>
+        <div style="background:var(--warn-soft);border-radius:14px;padding:14px;text-align:center">
+          <div style="font-size:26px">🩹</div><div style="font-size:13px;font-weight:600;color:#92600a">盖</div>
+          <div style="font-size:11.5px;color:var(--ink-3)">清洁敷料松散覆盖</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn ghost" id="btnRestart">📷 再测一次</button>
+    <div class="foot">
+      本工具为 AI 辅助初筛原型，不构成医疗诊断，不能替代医生面诊与 120 急救。<br>
+      <a href="/sus">✅ 完成可用性问卷（约 1 分钟）</a> · <a href="/model">查看模型卡与校准报告</a>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const state = { file: null, caseId: null, timer: null, device: null };
+state.device = localStorage.getItem("burn_device") || (() => {
+  const d = "U" + Math.random().toString(36).slice(2, 10);
+  localStorage.setItem("burn_device", d); return d;
+})();
+
+/* ---------- 红旗症状 ---------- */
+const FLAGS = [
+  ["breath", "呼吸困难 / 声音嘶哑"],
+  ["unconscious", "意识不清 / 面色苍白"],
+  ["large_area", "大面积（成人>10 手掌）"],
+  ["deep_dark", "创面焦黑 / 触之无痛"],
+  ["chemical", "化学灼伤 / 电击"],
+  ["stuck_cloth", "衣物与创面粘连"],
+  ["chronic", "糖尿病等基础疾病"],
+];
+FLAGS.forEach(([k, t]) => {
+  const c = document.createElement("div");
+  c.className = "chip red"; c.textContent = t; c.dataset.k = k;
+  c.onclick = () => { c.classList.toggle("on"); };
+  $("#redflagChips").appendChild(c);
+});
+
+/* ---------- 上传 ---------- */
+const dz = $("#dropZone"), fi = $("#fileInput");
+dz.onclick = () => fi.click();
+$("#btnRechoose").onclick = () => fi.click();
+dz.ondragover = e => { e.preventDefault(); dz.classList.add("drag"); };
+dz.ondragleave = () => dz.classList.remove("drag");
+dz.ondrop = e => { e.preventDefault(); dz.classList.remove("drag"); pick(e.dataTransfer.files[0]); };
+fi.onchange = () => pick(fi.files[0]);
+
+function pick(f) {
+  if (!f) return;
+  if (!/^image\//.test(f.type)) { alert("请选择图片文件"); return; }
+  if (f.size > 12 * 1024 * 1024) { alert("图片超过 12MB，请压缩后重试"); return; }
+  state.file = f;
+  $("#previewImg").src = URL.createObjectURL(f);
+  $("#previewWrap").style.display = "block";
+  dz.style.display = "none";
+  $("#imgTag").textContent = f.name.length > 22 ? f.name.slice(0, 22) + "…" : f.name;
+  $("#cardInfo").style.display = "block";
+  $("#btnAnalyze").disabled = false;
+  goto(1);
+  $("#cardInfo").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+/* ---------- 示例图片 ---------- */
+fetch("/api/health").then(r => r.json()).then(h => {
+  if (!h.ok) return;
+  fetch("/api/samples").then(r => r.json()).then(d => {
+    if (!d.ok) return;
+    d.samples.forEach(s => {
+      const im = document.createElement("img");
+      im.src = s.url; im.title = s.label;
+      im.onclick = () => fetch(s.url).then(r => r.blob()).then(b => pick(new File([b], "sample.jpg", { type: "image/jpeg" })));
+      $("#sampleRow").appendChild(im);
+    });
+  }).catch(() => {});
+}).catch(() => {});
+
+/* ---------- 步骤条 ---------- */
+function goto(n) {
+  document.querySelectorAll("#steps .st").forEach((s, i) => {
+    s.classList.toggle("on", i === n);
+    s.classList.toggle("done", i < n);
+  });
+}
+
+/* ---------- 分析 ---------- */
+$("#btnAnalyze").onclick = async () => {
+  const meta = {
+    age_group: $("#fAge").value,
+    site: $("#fSite").value,
+    area_hand: $("#fArea").value,
+    cause: $("#fCause").value,
+    red_flags: [...document.querySelectorAll("#redflagChips .chip.on")].map(c => c.dataset.k),
+  };
+  const fd = new FormData();
+  fd.append("image", state.file);
+  fd.append("meta", JSON.stringify(meta));
+  fd.append("device_id", state.device);
+  $("#cardUpload").style.display = "none";
+  $("#cardInfo").style.display = "none";
+  $("#cardLoading").style.display = "block";
+  goto(2);
+  try {
+    const r = await fetch("/api/analyze", { method: "POST", body: fd });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || "分析失败");
+    state.caseId = d.case_id;
+    render(d, meta);
+  } catch (e) {
+    $("#cardLoading").style.display = "none";
+    $("#cardUpload").style.display = "block";
+    alert(e.message);
+  }
+};
+
+function confRing(p, color) {
+  const r = 30, c = 2 * Math.PI * r, off = c * (1 - p);
+  return `<svg width="82" height="82" viewBox="0 0 82 82">
+    <circle cx="41" cy="41" r="${r}" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="8"/>
+    <circle cx="41" cy="41" r="${r}" fill="none" stroke="#fff" stroke-width="8"
+      stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${off}"
+      transform="rotate(-90 41 41)" style="transition:stroke-dashoffset 1s ease"/>
+    <text x="41" y="46" text-anchor="middle" fill="#fff" font-size="16" font-weight="700">${Math.round(p * 100)}%</text>
+  </svg>`;
+}
+
+const CLASS_COLOR = ["#0e9f6e", "#d97706", "#dc2626"];
+
+function render(d, meta) {
+  $("#cardLoading").style.display = "none";
+  $("#cardResult").style.display = "block";
+  goto(3);
+
+  const ai = d.ai, adv = d.advice;
+  const v = $("#verdict");
+  v.style.background = `linear-gradient(135deg, ${CLASS_COLOR[ai.class_index]}, ${CLASS_COLOR[ai.class_index]}cc)`;
+  $("#vName").textContent = ai.class_label;
+  $("#confRing").innerHTML = confRing(ai.confidence, "#fff");
+  $("#vMeta").innerHTML =
+    `判读置信度：<b>${(ai.confidence * 100).toFixed(1)}%</b>（已温度缩放校准）<br>` +
+    `转人工阈值：${(ai.threshold * 100).toFixed(0)}% · 推理耗时 ${ai.latency_ms}ms`;
+
+  // 概率条
+  const bars = ai.probs.map((p, i) => `
+    <div class="bar"><div class="lab"><span>${["浅度烧伤", "深二度烧伤", "三度烧伤"][i]}</span><b>${(p * 100).toFixed(1)}%</b></div>
+    <div class="track"><div class="fill" style="width:${p * 100}%;background:${CLASS_COLOR[i]}"></div></div></div>`).join("");
+  $("#verdict").insertAdjacentHTML("beforeend", `<div class="bars" style="position:relative;z-index:1">${bars}</div>`);
+
+  // 提示横幅
+  let banners = "";
+  if (ai.need_review) {
+    banners += `<div class="banner ${ai.class_index === 2 ? "danger" : "warn"}">
+      <div class="ic">⚠️</div><div><b>AI 判读结果仅供参考，已转医生复核</b><br>
+      ${ai.review_reasons.map(r => "· " + r.text).join("<br>")}</div></div>`;
+  } else {
+    banners += `<div class="banner ok"><div class="ic">✅</div>
+      <div>AI 置信度充足，本次结果未转人工复核。如建议与伤情明显不符，请立即就医并以医生判断为准。</div></div>`;
+  }
+  if (ai.quality.flags && ai.quality.flags.length) {
+    banners += `<div class="banner info"><div class="ic">📸</div><div>拍摄质量提示：${ai.quality.flags.join("；")}。建议重拍后重新判读。</div></div>`;
+  }
+  if (adv.escalated) {
+    banners += `<div class="banner danger"><div class="ic">🚨</div>
+      <div><b>根据您填写的信息，处置等级已升级</b><br>${adv.escalation_reasons.map(f => "· " + f.text).join("<br>")}</div></div>`;
+  }
+  $("#bannerZone").innerHTML = banners;
+
+  // 建议
+  $("#adviceHead").style.background = `linear-gradient(135deg, ${adv.color}, ${adv.color}cc)`;
+  $("#advLevel").textContent = adv.label + (adv.escalated ? "（已按红旗症状升级）" : "");
+  $("#advEta").textContent = "时间要求：" + adv.eta;
+  $("#advHeadline").textContent = adv.headline;
+  $("#advActions").innerHTML = adv.actions.map((t, i) =>
+    `<li><span class="no">${i + 1}</span><span>${t}</span></li>`).join("");
+  $("#advAvoid").innerHTML = `<div class="sub" style="margin-bottom:6px">❌ 不要做</div>
+    <div class="pillrow">${adv.avoid.map(t => `<span class="pill red">${t}</span>`).join("")}</div>`;
+  $("#advWatch").innerHTML = `<div class="sub" style="margin-bottom:6px">👀 观察这些危险信号</div>
+    <div class="pillrow">${adv.watch.map(t => `<span class="pill">${t}</span>`).join("")}</div>`;
+  $("#advDisclaimer").textContent = adv.disclaimer;
+
+  // 复核状态
+  if (ai.need_review) {
+    $("#reviewCard").style.display = "block";
+    renderReview("pending");
+    state.timer = setInterval(poll, 5000);
+  }
+  $("#cardResult").scrollIntoView({ behavior: "smooth" });
+}
+
+async function poll() {
+  if (!state.caseId) return;
+  const r = await fetch("/api/case/" + state.caseId);
+  const d = await r.json();
+  if (d.ok && d.case.status === "reviewed") {
+    clearInterval(state.timer);
+    renderReviewDone(d);
+  }
+}
+
+function renderReviewDone(d) {
+  const rv = d.reviews[d.reviews.length - 1];
+  const cs = d.case;
+  $("#reviewBody").innerHTML = `<div class="st" style="color:var(--ok)">✅ 医生复核完成</div>
+    <div>复核结论：<b>${rv.decision === "confirm" ? "确认 AI 判读" : "修正 AI 判读"}</b>
+    ${rv.decision === "correct" ? ` -> <b style="color:var(--danger)">${cs.class_name}</b>` : ""}</div>
+    <div style="margin-top:4px;color:var(--ink-3);font-size:12.5px">复核医生：${rv.doctor}
+    ${rv.note ? " · 意见：" + rv.note : ""}</div>`;
+
+  // 判读结论与处置建议按医生最终结论更新
+  const ci = cs.final_class;
+  const adv = d.advice;
+  $("#verdict").style.background = `linear-gradient(135deg, ${CLASS_COLOR[ci]}, ${CLASS_COLOR[ci]}cc)`;
+  $("#vName").textContent = cs.class_label;
+  $("#vMeta").innerHTML =
+    `医生复核后的最终结论<br>AI 原始判读：${cs.ai_class_name} · 置信度 ${(cs.ai_confidence * 100).toFixed(1)}%`;
+
+  $("#adviceHead").style.background = `linear-gradient(135deg, ${adv.color}, ${adv.color}cc)`;
+  $("#advLevel").textContent = adv.label + (adv.escalated ? "（已按红旗症状升级）" : "");
+  $("#advEta").textContent = "时间要求：" + adv.eta;
+  $("#advHeadline").textContent = adv.headline;
+  $("#advActions").innerHTML = adv.actions.map((t, i) =>
+    `<li><span class="no">${i + 1}</span><span>${t}</span></li>`).join("");
+}
+
+/* ---------- 重来 ---------- */
+$("#btnRestart").onclick = () => location.reload();
+</script>
+</body>
+</html>

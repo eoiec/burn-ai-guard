@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>可用性问卷 (SUS) · AI 防护</title>
+<link rel="stylesheet" href="/assets/app.css">
+<style>
+.q { padding: 14px 0; border-bottom: 1px dashed var(--line); }
+.q .t { font-size: 14px; margin-bottom: 10px; }
+.q .t small { color: var(--ink-3); font-size: 11px; margin-left: 6px; }
+.opts { display: flex; gap: 8px; }
+.opts .o { flex: 1; text-align: center; padding: 9px 0; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--line); font-size: 13px; color: var(--ink-2); transition: .15s; background: #fbfdfe; }
+.opts .o:hover { border-color: var(--brand-2); }
+.opts .o.on { background: var(--brand-soft); border-color: var(--brand-2); color: var(--brand); font-weight: 700; }
+.score { text-align: center; padding: 10px 0 4px; }
+.score .v { font-size: 44px; font-weight: 800; color: var(--brand); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="logo">📝</div>
+    <div>
+      <h1>系统可用性量表（SUS）</h1>
+      <p>10 题 · 约 1 分钟 · 结果用于可用性验证（目标 ≥ 68 分）</p>
+    </div>
+    <div class="nav"><a href="/">返回用户端</a></div>
+  </div>
+
+  <div class="card">
+    <div class="sub">请根据刚才的完整体验（上传照片 → 查看 AI 判读 → 查看处置建议 → 了解转人工提示）作答。1=非常不同意，5=非常同意。</div>
+    <div id="qs"></div>
+    <div class="grid2" style="margin-top:16px">
+      <label class="f">完成全部操作了吗？
+        <select id="fDone"><option value="1">是，全部完成</option><option value="0">否，中途放弃</option></select>
+      </label>
+      <label class="f">整个流程大约耗时（分钟）<input type="text" id="fTime" placeholder="如 3"></label>
+    </div>
+    <button class="btn" id="btnSubmit" style="margin-top:16px">提交问卷</button>
+    <div class="score" id="score" style="display:none">
+      <div class="v" id="scoreV">—</div>
+      <div class="sub" id="scoreT"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const QS = [
+  ["我想经常使用这个系统"],
+  ["我觉得这个系统过于复杂"],
+  ["我觉得这个系统容易使用"],
+  ["我觉得需要专业人员才能使用"],
+  ["我发现系统各功能整合得很好"],
+  ["我觉得系统各部分过于不一致"],
+  ["我想大多数人会很快学会使用"],
+  ["我觉得系统使用起来很繁琐"],
+  ["使用时我感到很有信心"],
+  ["使用前我需要学习很多东西"],
+];
+const P_LABEL = ["1 非常不同意", "2", "3", "4", "5 非常同意"];
+const answers = new Array(10).fill(0);
+const box = document.getElementById("qs");
+QS.forEach((q, i) => {
+  const d = document.createElement("div");
+  d.className = "q";
+  d.innerHTML = `<div class="t">${i + 1}. ${q[0]}${i % 2 === 1 ? '<small>（反向计分题）</small>' : ""}</div>
+    <div class="opts">${P_LABEL.map((p, j) => `<div class="o" data-v="${j + 1}">${p}</div>`).join("")}</div>`;
+  d.querySelectorAll(".o").forEach(o => o.onclick = () => {
+    d.querySelectorAll(".o").forEach(x => x.classList.remove("on"));
+    o.classList.add("on"); answers[i] = +o.dataset.v;
+  });
+  box.appendChild(d);
+});
+
+document.getElementById("btnSubmit").onclick = async () => {
+  if (answers.some(a => !a)) { alert("还有题目未作答"); return; }
+  const body = {
+    answers,
+    completed: document.getElementById("fDone").value === "1",
+    task_time_s: (parseFloat(document.getElementById("fTime").value) || 0) * 60,
+    device_id: localStorage.getItem("burn_device") || "sus-user",
+  };
+  const r = await fetch("/api/sus", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const d = await r.json();
+  if (!d.ok) { alert(d.error); return; }
+  const s = document.getElementById("score");
+  s.style.display = "block";
+  document.getElementById("scoreV").textContent = d.total.toFixed(1);
+  const st = d.stats;
+  document.getElementById("scoreT").textContent =
+    `您的 SUS 得分：${d.total >= 68 ? "✅ 达到" : "❌ 未达到"}可用性标准（68 分）· ` +
+    `当前累计 ${st.n} 份问卷，均分 ${st.avg.toFixed(1)}，达标率 ${(st.pass_rate * 100).toFixed(0)}%`;
+  document.getElementById("btnSubmit").disabled = true;
+  s.scrollIntoView({ behavior: "smooth" });
+};
+</script>
+</body>
+</html>
