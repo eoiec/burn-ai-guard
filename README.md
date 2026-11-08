@@ -1,5 +1,11 @@
 # AI 防护 —— 家庭热液烫伤深度三分类与低置信度转人工机制
 
+[![Release](https://img.shields.io/github/v/release/eoiec/burn-ai-guard?label=release&color=0f766e)](https://github.com/eoiec/burn-ai-guard/releases/tag/v1.0)
+[![License](https://img.shields.io/github/license/eoiec/burn-ai-guard?color=0f766e)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10%2B-3776ab)](requirements.txt)
+
+**📦 下载安卓安装包：[burn-ai-guard-v1.0.apk](https://github.com/eoiec/burn-ai-guard/releases/download/v1.0/burn-ai-guard-v1.0.apk)** · 或在本机 `python -m server.app` 后打开 `/app` 当 PWA 用。
+
 面向家庭热液烫伤"黄金 1 小时"急救场景的 AI 辅助判读系统（大创项目工程实现）：
 
 ```
