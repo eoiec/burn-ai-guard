@@ -56,3 +56,9 @@ reports/app_home.png
 reports/app_result.png
 reports/app_reviewed.png
 reports/app_doctor.png
+
+# 本地凭据与日志（禁止提交）
+gh_login_token.txt
+gh_login*.log
+gh_flow.log
+server.log
