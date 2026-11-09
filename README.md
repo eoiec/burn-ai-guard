@@ -4,7 +4,9 @@
 [![License](https://img.shields.io/github/license/eoiec/burn-ai-guard?color=0f766e)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776ab)](requirements.txt)
 
-**📦 下载安卓安装包：[burn-ai-guard-v1.0.apk](https://github.com/eoiec/burn-ai-guard/releases/download/v1.0/burn-ai-guard-v1.0.apk)** · 或在本机 `python -m server.app` 后打开 `/app` 当 PWA 用。
+**🌐 在线体验（免安装，无需任何本地环境）：[https://burn-ai-guard.app.workbuddy.host/?sharecode=CP3ZJ5V4J2](https://burn-ai-guard.app.workbuddy.host/?sharecode=CP3ZJ5V4J2)** —— 手机浏览器打开后"添加到主屏幕"即为 PWA；云端运行真实 PyTorch 推理后端。
+
+**📦 下载安卓安装包：[burn-ai-guard-v1.0.apk](https://github.com/eoiec/burn-ai-guard/releases/download/v1.0/burn-ai-guard-v1.0.apk)**（默认直连上述云端服务，无需本机后端；也可在"我的"页改回局域网 IP）
 
 面向家庭热液烫伤"黄金 1 小时"急救场景的 AI 辅助判读系统（大创项目工程实现）：
 

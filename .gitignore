@@ -62,3 +62,5 @@ gh_login_token.txt
 gh_login*.log
 gh_flow.log
 server.log
+
+deploy/

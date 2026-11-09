@@ -1,6 +1,7 @@
-// 服务地址：真机预览请改成局域网 IP，如 http://192.168.1.5:5000
+// 服务地址：默认指向 WorkBuddy 云端公网部署（小程序要求已备案域名，真机联调请改局域网 IP）
 module.exports = {
-  BASE_URL: "http://127.0.0.1:5000",
+  BASE_URL: "https://burn-ai-guard.app.workbuddy.host",
+  SHARE_CODE: "CP3ZJ5V4J2",
   CLASS_NAMES: ["浅度烧伤", "深二度烧伤", "三度烧伤"],
   CLASS_LABELS: ["浅度烧伤（Ⅰ度+浅Ⅱ度）", "深二度烧伤（深Ⅱ度）", "三度烧伤（Ⅲ度）"],
   CLASS_COLOR: ["#0e9f6e", "#d97706", "#dc2626"],

@@ -9,8 +9,9 @@ rm -rf www
 mkdir -p www
 cp -r ../frontend/app/* www/
 cat > www/api-default.js <<EOF
-// APK 内默认服务地址：同一 WiFi 下运行后端的电脑 IP（可在 App「我的」页修改）
-window.__DEFAULT_API__ = "http://10.167.188.32:5000";
+// APK 内默认服务地址：WorkBuddy 云端公网部署（可在 App「我的」页改回局域网 IP）
+window.__DEFAULT_API__ = "https://burn-ai-guard.app.workbuddy.host";
+window.__SHARE_CODE__ = "CP3ZJ5V4J2";
 EOF
 sed -i 's#<script src="/app/app.js"></script>#<script src="api-default.js"></script>\n<script src="app.js"></script>#' www/index.html
 sed -i 's#/app/app.css#app.css#g; s#/app/manifest.webmanifest#manifest.webmanifest#g; s#/app/icons/#icons/#g' www/index.html

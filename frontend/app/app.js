@@ -17,8 +17,19 @@
     set token(v) { localStorage.setItem("burn_token", v); },
   };
 
+  // 云端分享码：WorkBuddy 托管的应用通过 ?sharecode= 鉴权（APK 构建时注入，
+  // 浏览器打开分享链接时从 URL 自动捕获）
+  const SHARE_CODE =
+    window.__SHARE_CODE__ ||
+    new URLSearchParams(location.search).get("sharecode") ||
+    "";
+
   function api(path) {
-    return (store.api ? store.api.replace(/\/+$/, "") : "") + path;
+    let p = path;
+    if (SHARE_CODE && !/[?&]sharecode=/.test(p)) {
+      p += (p.includes("?") ? "&" : "?") + "sharecode=" + SHARE_CODE;
+    }
+    return (store.api ? store.api.replace(/\/+$/, "") : "") + p;
   }
 
   function assetUrl(p) {

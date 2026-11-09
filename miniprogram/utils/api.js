@@ -1,9 +1,14 @@
-const { BASE_URL } = require("../config");
+const { BASE_URL, SHARE_CODE } = require("../config");
+
+function withShare(path) {
+  if (!SHARE_CODE || /[?&]sharecode=/.test(path)) return path;
+  return path + (path.includes("?") ? "&" : "?") + "sharecode=" + SHARE_CODE;
+}
 
 function request(path, options = {}) {
   return new Promise((resolve, reject) => {
     wx.request({
-      url: BASE_URL + path,
+      url: BASE_URL + withShare(path),
       method: options.method || "GET",
       data: options.data || {},
       header: Object.assign({ "Content-Type": "application/json" }, options.header || {}),
@@ -16,7 +21,7 @@ function request(path, options = {}) {
 function upload(path, filePath, formData) {
   return new Promise((resolve, reject) => {
     wx.uploadFile({
-      url: BASE_URL + path,
+      url: BASE_URL + withShare(path),
       filePath,
       name: "image",
       formData: formData || {},
